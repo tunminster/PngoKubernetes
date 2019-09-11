@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dixi-timetable-uat
+spec:
+  selector:
+    matchLabels:
+      app: dixi-timetable-uat
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: dixi-timetable-uat
+    spec:
+      containers:
+      - name: sltrademanagementacr
+        image: sltrademanagementacr.azurecr.io/develop/api/timetable-ms:28686_20190726.8
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "150m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 8080
+        env:
+        - name: "ASPNETCORE_ENVIRONMENT"
+          value: "Kubernetes"
+        volumeMounts:
+        - name: secrets
+          mountPath: /app/secrets
+          readOnly: true      
+      imagePullSecrets:
+        - name: regcred      
+      volumes:
+      - name: secrets
+        secret:
+          secretName: timetable.appsettings.secret    
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dixi-timetable-uat-service
+spec:
+  selector:
+    app: dixi-timetable-uat
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: test-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+ tls:
+  - hosts:
+      - hello-world.info
+    secretName: aks-tls-secret
+ rules:
+ - host: hello-world.info
+   http:
+     paths:
+      - backend:
+         serviceName: dixi-timetable-uat-service
+         servicePort: 8080
+    
+
+  
+
